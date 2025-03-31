@@ -1,6 +1,6 @@
-use crate::cc::{cstr_to_rust, rust_to_cstring};
-use crate::net::http_get_async;
 use std::os::raw::c_char;
+use crate::cc::{cstr_to_rust, rust_to_cstr};
+use crate::net::http_get_async;
 use once_cell::sync::Lazy;
 use tokio::runtime::Runtime;
 
@@ -18,7 +18,7 @@ fn ngenrs_http_get(url: *const c_char) -> *mut c_char {
 
     let result = RUNTIME.block_on(async {
         match http_get_async(url_str).await {
-            Some(text) => rust_to_cstring(text),
+            Some(text) => rust_to_cstr(text),
             None => std::ptr::null_mut(),
         }
     });

@@ -1,6 +1,6 @@
 use std::os::raw::c_char;
+use crate::cc::{cstr_to_rust, rust_to_cstr, ngenrs_free_ptr};
 use crate::kv::KV;
-use crate::cc::{cstr_to_rust, rust_to_cstring};
 
 #[unsafe(no_mangle)]
 pub extern "C" 
@@ -117,7 +117,7 @@ fn ngenrs_kv_read_string(store: *mut KV, key: *const c_char) -> *mut c_char {
         let kv_ref = &mut *store;
         match kv_ref.read_string(key_str) {
             Ok(value) => match value {
-                Some(s) => rust_to_cstring(s),
+                Some(s) => rust_to_cstr(s),
                 None => std::ptr::null_mut(),
             },
             Err(_) => std::ptr::null_mut(),
@@ -128,7 +128,5 @@ fn ngenrs_kv_read_string(store: *mut KV, key: *const c_char) -> *mut c_char {
 #[unsafe(no_mangle)]
 pub extern "C" 
 fn ngenrs_kv_close(store: *mut KV) {
-    if !store.is_null() {
-        unsafe { let _ = Box::from_raw(store); };
-    }
+    ngenrs_free_ptr(store);
 }
