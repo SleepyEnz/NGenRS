@@ -5,9 +5,10 @@ edition = "2024"
 
 [lib]
 name = "ngenrs"
-path = "src/net.rs"
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+redb = "1.3.0"
 reqwest = { version = "0.11", features = ["json"] }
 tokio = { version = "1", features = ["full"] }
 once_cell = "1.18.0"
