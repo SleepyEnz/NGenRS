@@ -24,15 +24,28 @@ sha2 = "0.10"
 base64 = "0.22.1"
 flate2 = { version = "1.0", features = ["zlib"] }
 
-[env]
-NDK_HOME = { value = "~/Library/Android/sdk/ndk/28.0.13004108/" }
-
 [target.aarch64-linux-android]
-ar = "${NDK_HOME}/toolchains/llvm/prebuilt/darwin-x86_64/bin/aarch64-linux-android-ar"
-linker = "${NDK_HOME}/toolchains/llvm/prebuilt/darwin-x86_64/bin/aarch64-linux-android21-clang"
+ar = "${env.ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/darwin-x86_64/bin/llvm-ar"
+linker = "${env.ANDROID_NDK_ROOT}/toolchains/llvm/prebuilt/darwin-x86_64/bin/aarch64-linux-android21-clang"
+
+[target.aarch64-unknown-linux-ohos]
+ar = "${env.HARMONYOS_NDK_ROOT}/llvm/bin/llvm-ar"
+linker = "${env.HARMONYOS_NDK_ROOT}/llvm/bin/aarch64-unknown-linux-ohos-clang"
 
 [target.aarch64-apple-ios]
 linker = "xcrun -sdk iphoneos clang"
 
 [target.aarch64-apple-darwin]
 linker = "clang"
+
+[target.wasm32-unknown-unknown]
+rustflags = [
+  "-C", "link-arg=--import-memory",
+  "-C", "link-arg=--initial-memory=65536",
+  "-C", "link-arg=--max-memory=65536",
+  "-C", "link-arg=--export-table"
+]
+
+[target.x86_64-pc-windows-msvc]
+ar = "x86_64-w64-mingw32-ar"
+linker = "x86_64-w64-mingw32-gcc"
