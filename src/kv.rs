@@ -1,4 +1,4 @@
-use redb::{Database, Error, ReadableTable, TableDefinition};
+use redb::{Database, Error, TableDefinition};
 use std::path::Path;
 //use once_cell::sync::Lazy;
 //use std::sync::Mutex;

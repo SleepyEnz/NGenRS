@@ -1,4 +1,3 @@
-use std::slice;
 use crate::cc::{cbytes_to_rust, rust_to_cbytes, ngenrs_free_ptr};
 use crate::crypto::{Aes256EcbPkcs5, hash_md5, hash_sha1, hash_sha256, base64_encode, base64_decode};
 
@@ -27,7 +26,10 @@ fn ngenrs_crypto_aes256_ecb_pkcs5_init(key: *const u8, key_len: usize) -> *mut A
     if key.is_null() || key_len != 32 {  // AES-256 requires 32-byte key
         return std::ptr::null_mut();
     }
-    let key_bytes = unsafe { slice::from_raw_parts(key, key_len) };
+    let key_bytes = match { cbytes_to_rust(key, key_len) } {
+        Some(bytes) => bytes,
+        None => return std::ptr::null_mut(),
+    };
     match Aes256EcbPkcs5::new(key_bytes) {
         Ok(cipher) => Box::into_raw(Box::new(cipher)),
         Err(_) => std::ptr::null_mut(),
