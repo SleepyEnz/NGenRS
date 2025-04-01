@@ -5,3 +5,5 @@ pub mod kv;
 pub mod kv_c;
 pub mod crypto;
 pub mod crypto_c;
+pub mod zip;
+pub mod zip_c;
