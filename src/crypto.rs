@@ -3,8 +3,8 @@ use aes::Aes256;
 use block_modes::{BlockMode, Ecb};
 use block_modes::block_padding::Pkcs7;
 use md5::{Md5, Digest};
-use sha1::{Sha1, Digest};
-use sha2::{Sha256, Digest};
+use sha1::Sha1;
+use sha2::Sha256;
 use base64::{Engine as _, engine::general_purpose};
 use std::error::Error;
 
@@ -41,11 +41,11 @@ impl Aes256EcbPkcs5 {
     }
 
     pub fn encrypt(&self, data: &[u8]) -> Vec<u8> {
-        self.cipher.encrypt_vec(data)
+        self.cipher.clone().encrypt_vec(data)
     }
 
     pub fn decrypt(&self, data: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
-        Ok(self.cipher.decrypt_vec(data)?)
+        Ok(self.cipher.clone().decrypt_vec(data)?)
     }
 }
 
@@ -71,7 +71,7 @@ pub fn base64_encode(data: &[u8]) -> Vec<u8> {
     general_purpose::STANDARD.encode(data).into_bytes()
 }
 
-pub fn base64_decode(data: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
-    let s = std::str::from_utf8(data)?;
-    general_purpose::STANDARD.decode(s).map_err(|e| e.into())
+pub fn base64_decode(data: &[u8]) -> Vec<u8> {
+    let s = std::str::from_utf8(data).unwrap_or_default();
+    general_purpose::STANDARD.decode(s).unwrap_or_default()
 }

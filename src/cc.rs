@@ -50,14 +50,14 @@ pub fn rust_to_cbytes(data: Vec<u8>) -> (*mut u8, usize) {
 #[unsafe(no_mangle)]
 pub extern "C" 
 fn ngenrs_free<T>(_x: T) {
-    drop(value);
+    drop(_x);
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" 
-fn ngenrs_free_ptr(raw: *mut T) {
+fn ngenrs_free_ptr<T>(raw: *mut T) {
     if !raw.is_null() {
-        unsafe { ngenrs_free(Box::from_raw(raw.cast::<u8>())) };
+        unsafe { ngenrs_free(Box::from_raw(raw)) };
     }
 }
 
@@ -70,5 +70,5 @@ fn ngenrs_free_cstr(s: *mut c_char) {
 #[unsafe(no_mangle)]
 pub extern "C" 
 fn ngenrs_free_bytes(buf: *mut u8, len: usize) {
-    ngenrs_free_ptr(unsafe { slice::from_raw_parts_mut(buf, len) });
+    ngenrs_free_ptr(unsafe { slice::from_raw_parts_mut(buf, len).as_mut_ptr() });
 }

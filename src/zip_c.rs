@@ -1,5 +1,7 @@
-use super::zip::{CompressionFormat, compress, decompress};
-use super::cc::{cbytes_to_rust, rust_to_cbytes};
+use std::ffi::CString;
+use std::os::raw::c_int;
+use crate::zip::{CompressionFormat, compress, decompress};
+use crate::cc::{cbytes_to_rust, rust_to_cbytes};
 
 #[unsafe(no_mangle)]
 pub extern "C" 
@@ -23,7 +25,7 @@ fn ngenrs_z_compress(
 
     let input_slice = match cbytes_to_rust(input, input_len) {
         Some(slice) => slice,
-        None => return CString::new("Invalid input buffer").unwrap().into_raw(),
+        None => return CString::new("Invalid input buffer").unwrap().into_raw() as *mut u8,
     };
     let reader = std::io::Cursor::new(input_slice);
 
@@ -36,7 +38,7 @@ fn ngenrs_z_compress(
             }
             std::ptr::null_mut()
         }
-        Err(e) => CString::new(e.to_string()).unwrap().into_raw(),
+        Err(e) => CString::new(e.to_string()).unwrap().into_raw() as *mut u8,
     }
 }
 
@@ -62,7 +64,7 @@ fn ngenrs_z_decompress(
 
     let input_slice = match cbytes_to_rust(input, input_len) {
         Some(slice) => slice,
-        None => return CString::new("Invalid input buffer").unwrap().into_raw(),
+        None => return CString::new("Invalid input buffer").unwrap().into_raw() as *mut u8,
     };
     let reader = std::io::Cursor::new(input_slice);
 
@@ -75,6 +77,6 @@ fn ngenrs_z_decompress(
             }
             std::ptr::null_mut()
         }
-        Err(e) => CString::new(e.to_string()).unwrap().into_raw(),
+        Err(e) => CString::new(e.to_string()).unwrap().into_raw() as *mut u8,
     }
 }
