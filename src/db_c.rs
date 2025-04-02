@@ -1,21 +1,11 @@
 use crate::db::{DB, QueryResult};
 use crate::cc::{cstr_to_rust, rust_to_cstr, ngenrs_free_ptr, box_into_raw_new};
-use std::ffi::{c_char, CStr};
+use std::ffi::{c_void, c_char};
 use std::ptr;
-
-#[repr(C)]
-pub struct NGenRSDB {
-    db: DB,
-}
-
-#[repr(C)]
-pub struct NGenRSDBQueryResult {
-    result: QueryResult<'static>,
-}
 
 #[unsafe(no_mangle)]
 pub extern "C" 
-fn ngenrs_db_open(path: *const c_char) -> *mut NGenRSDB {
+fn ngenrs_db_open(path: *const c_char) -> *mut c_void {
     if path.is_null() {
         return ptr::null_mut();
     }
@@ -26,63 +16,71 @@ fn ngenrs_db_open(path: *const c_char) -> *mut NGenRSDB {
     };
 
     match DB::open(&path_str) {
-        Ok(db) => { box_into_raw_new(NGenRSDB { db }) },
+        Ok(db) => { box_into_raw_new(db) as *mut c_void },
         Err(_) => ptr::null_mut(),
     }
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" 
-fn ngenrs_db_exec(db: *mut NGenRSDB, sql: *const c_char) -> bool {
+fn ngenrs_db_exec(db: *mut c_void, sql: *const c_char) -> bool {
     if db.is_null() || sql.is_null() {
         return false;
     }
 
-    let db = unsafe { &*db };
+    let db = unsafe { &*(db as *mut DB) };
     let sql_str = match { cstr_to_rust(sql) } {
         Some(s) => s,
         None => return false,
     };
 
-    db.db.exec(&sql_str).is_ok()
+    db.exec(&sql_str).is_ok()
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" 
-fn ngenrs_db_query(db: *mut NGenRSDB, sql: *const c_char) -> *mut NGenRSDBQueryResult {
+fn ngenrs_db_query(db: *mut c_void, sql: *const c_char) -> *mut c_void {
     if db.is_null() || sql.is_null() {
         return ptr::null_mut();
     }
 
-    let db = unsafe { &mut *db };
+    let db = unsafe { &mut *(db as *mut DB) };
     let sql_str = match { cstr_to_rust(sql) } {
         Some(s) => s,
         None => return ptr::null_mut(),
     };
 
-    match db.db.query(&sql_str) {
-        Ok(result) => {
-            let result = unsafe { std::mem::transmute(result) };
-            box_into_raw_new(NGenRSDBQueryResult { result })
-        }
+    match db.query(&sql_str) {
+        Ok(result) => { box_into_raw_new(result) as *mut c_void },
         Err(_) => ptr::null_mut(),
     }
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" 
-fn ngenrs_db_get_string(result: *mut NGenRSDBQueryResult, column: *const c_char) -> *mut c_char {
+fn ngenrs_db_next_row(result: *mut c_void) -> bool {
+    if result.is_null() {
+        return false;
+    }
+
+    let result = unsafe { &mut *(result as *mut QueryResult) };
+    result.next_row().is_some()
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" 
+fn ngenrs_db_get_string(result: *mut c_void, column: *const c_char) -> *mut c_char {
     if result.is_null() || column.is_null() {
         return ptr::null_mut();
     }
 
-    let result = unsafe { &mut *result };
+    let result = unsafe { &mut *(result as *mut QueryResult) };
     let column_str = match { cstr_to_rust(column) } {
         Some(s) => s,
         None => return ptr::null_mut(),
     };
 
-    match result.result.next_row().and_then(|row| row.get_string(&column_str)) {
+    match result.next_row().and_then(|row| row.get_string(&column_str)) {
         Some(s) => { rust_to_cstr(s) },
         None => ptr::null_mut(),
     }
@@ -90,39 +88,37 @@ fn ngenrs_db_get_string(result: *mut NGenRSDBQueryResult, column: *const c_char)
 
 #[unsafe(no_mangle)]
 pub extern "C" 
-fn ngenrs_db_get_i64(result: *mut NGenRSDBQueryResult, column: *const c_char) -> i64 {
+fn ngenrs_db_get_i64(result: *mut c_void, column: *const c_char) -> i64 {
     if result.is_null() || column.is_null() {
         return 0;
     }
 
-    let result = unsafe { &mut *result };
-    let c_str = unsafe { CStr::from_ptr(column) };
-    let column_str = match c_str.to_str() {
-        Ok(s) => s,
-        Err(_) => return 0,
+    let result = unsafe { &mut *(result as *mut QueryResult) };
+    let column_str = match { cstr_to_rust(column) } {
+        Some(s) => s,
+        None => return 0,
     };
 
-    result.result.next_row()
-        .and_then(|row| row.get_i64(column_str))
+    result.next_row()
+        .and_then(|row| row.get_i64(&column_str))
         .unwrap_or(0)
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" 
-fn ngenrs_db_get_f64(result: *mut NGenRSDBQueryResult, column: *const c_char) -> f64 {
+fn ngenrs_db_get_f64(result: *mut c_void, column: *const c_char) -> f64 {
     if result.is_null() || column.is_null() {
         return 0.0;
     }
 
-    let result = unsafe { &mut *result };
-    let c_str = unsafe { CStr::from_ptr(column) };
-    let column_str = match c_str.to_str() {
-        Ok(s) => s,
-        Err(_) => return 0.0,
+    let result = unsafe { &mut *(result as *mut QueryResult) };
+    let column_str = match { cstr_to_rust(column) } {
+        Some(s) => s,
+        None => return 0.0,
     };
 
-    result.result.next_row()
-        .and_then(|row| row.get_f64(column_str))
+    result.next_row()
+        .and_then(|row| row.get_f64(&column_str))
         .unwrap_or(0.0)
 }
 
@@ -134,12 +130,16 @@ fn ngenrs_db_free_string(s: *mut c_char) {
 
 #[unsafe(no_mangle)]
 pub extern "C" 
-fn ngenrs_db_free_database(db: *mut NGenRSDB) {
-    ngenrs_free_ptr(db)
+fn ngenrs_db_free_database(db: *mut c_void) {
+    if !db.is_null() {
+        unsafe { let _ = Box::from_raw(db as *mut DB); }
+    }
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" 
-fn ngenrs_db_free_result(result: *mut NGenRSDBQueryResult) {
-    ngenrs_free_ptr(result)
+fn ngenrs_db_free_result(result: *mut c_void) {
+    if !result.is_null() {
+        unsafe { let _ = Box::from_raw(result as *mut QueryResult); }
+    }
 }

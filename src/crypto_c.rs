@@ -1,5 +1,6 @@
 use crate::cc::{cbytes_to_rust, rust_to_cbytes, ngenrs_free_ptr, box_into_raw_new};
 use crate::crypto::{Aes256EcbPkcs5, rsa_enc, rsa_dec, hash_md5, hash_sha1, hash_sha256, base64_encode, base64_decode};
+use std::os::raw::c_void;
 
 unsafe fn common_crypto_process<F>(
     data: *const u8,
@@ -22,8 +23,8 @@ where
 
 #[unsafe(no_mangle)]
 pub extern "C"
-fn ngenrs_crypto_aes256_ecb_pkcs5_init(key: *const u8, key_len: usize) -> *mut Aes256EcbPkcs5 {
-    if key.is_null() || key_len != 32 {  // AES-256 requires 32-byte key
+fn ngenrs_crypto_aes256_ecb_pkcs5_init(key: *const u8, key_len: usize) -> *mut c_void {
+    if key.is_null() || key_len != 32 {
         return std::ptr::null_mut();
     }
     let key_bytes = match { cbytes_to_rust(key, key_len) } {
@@ -31,7 +32,7 @@ fn ngenrs_crypto_aes256_ecb_pkcs5_init(key: *const u8, key_len: usize) -> *mut A
         None => return std::ptr::null_mut(),
     };
     match Aes256EcbPkcs5::new(key_bytes) {
-        Ok(cipher) => box_into_raw_new(cipher),
+        Ok(cipher) => box_into_raw_new(cipher) as *mut c_void,
         Err(_) => std::ptr::null_mut(),
     }
 }
@@ -39,7 +40,7 @@ fn ngenrs_crypto_aes256_ecb_pkcs5_init(key: *const u8, key_len: usize) -> *mut A
 #[unsafe(no_mangle)]
 pub extern "C" 
 fn ngenrs_crypto_aes256_ecb_pkcs5_encrypt(
-    cipher: *mut Aes256EcbPkcs5,
+    cipher: *mut c_void,
     data: *const u8,
     data_len: usize,
     out_len: *mut usize,
@@ -47,7 +48,7 @@ fn ngenrs_crypto_aes256_ecb_pkcs5_encrypt(
     if cipher.is_null() {
         return std::ptr::null_mut();
     }
-    let cipher_ref = unsafe { &*cipher };
+    let cipher_ref = unsafe { &*(cipher as *mut Aes256EcbPkcs5) };
     unsafe { 
         common_crypto_process(data, data_len, out_len, |bytes| {
             cipher_ref.enc(bytes)
@@ -76,7 +77,7 @@ fn ngenrs_crypto_aes256_ecb_pkcs5_decrypt(
 
 #[unsafe(no_mangle)]
 pub extern "C" 
-fn ngenrs_crypto_aes256_ecb_pkcs5_release(cipher: *mut Aes256EcbPkcs5) {
+fn ngenrs_crypto_aes256_ecb_pkcs5_release(cipher: *mut c_void) {
     ngenrs_free_ptr(cipher);
 }
 

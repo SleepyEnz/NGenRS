@@ -13,7 +13,7 @@ static RUNTIME: Lazy<Runtime> = Lazy::new(|| {
 // Client management
 #[unsafe(no_mangle)]
 pub extern "C"
-fn ngenrs_http_client_new(ca_cert_path: *const c_char) -> *mut HttpClient {
+fn ngenrs_http_client_new(ca_cert_path: *const c_char) -> *mut c_void {
     let ca_path = if !ca_cert_path.is_null() {
         let path_str = cstr_to_rust(ca_cert_path).unwrap();
         Some(std::path::Path::new(path_str))
@@ -23,22 +23,19 @@ fn ngenrs_http_client_new(ca_cert_path: *const c_char) -> *mut HttpClient {
 
     box_into_raw_new(
         HttpClient::new(ca_path).expect("Failed to create HTTP client")
-    )
+    ) as *mut c_void
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" 
-fn ngenrs_http_client_free(client: *mut HttpClient) {
-    ngenrs_free_ptr(client as *mut c_void);
+fn ngenrs_http_client_free(client: *mut c_void) {
+    ngenrs_free_ptr(client)
 }
 
 // Common response handling
 unsafe fn handle_response(resp: Result<HttpResponse, Box<dyn std::error::Error>>) -> *mut c_void {
     match resp {
-        Ok(resp) => {
-            let boxed = Box::new(resp);
-            Box::into_raw(boxed) as *mut c_void
-        },
+        Ok(resp) => box_into_raw_new(resp) as *mut c_void,
         Err(_) => std::ptr::null_mut(),
     }
 }
@@ -47,13 +44,13 @@ unsafe fn handle_response(resp: Result<HttpResponse, Box<dyn std::error::Error>>
 #[unsafe(no_mangle)]
 pub extern "C" 
 fn ngenrs_http_get(
-    client: *const HttpClient,
+    client: *const c_void,
     url: *const c_char,
     headers: *const HashMap<*const c_char, *const c_char>,
     headers_len: usize,
     body: *const c_char,
 ) -> *mut c_void {
-    let client = unsafe { &*client };
+    let client = unsafe { &*(client as *const HttpClient) };
     let url = cstr_to_rust(url).unwrap_or_default();
     let headers = unsafe { convert_c_headers(headers, headers_len) };
     let body = if !body.is_null() {
@@ -73,14 +70,14 @@ fn ngenrs_http_get(
 #[unsafe(no_mangle)]
 pub extern "C" 
 fn ngenrs_http_post(
-    client: *const HttpClient,
+    client: *const c_void,
     url: *const c_char,
     headers: *const HashMap<*const c_char, *const c_char>,
     headers_len: usize,
     body: *const c_char,
     json: *const c_char,
 ) -> *mut c_void {
-    let client = unsafe { &*client };
+    let client = unsafe { &*(client as *const HttpClient) };
     let url = cstr_to_rust(url).unwrap_or_default();
     let headers = unsafe { convert_c_headers(headers, headers_len) };
     let body = if !body.is_null() {
@@ -105,7 +102,7 @@ fn ngenrs_http_post(
 #[unsafe(no_mangle)]
 pub extern "C" 
 fn ngenrs_http_response_free(resp: *mut c_void) {
-    ngenrs_free_ptr(resp);
+    ngenrs_free_ptr(resp)
 }
 
 #[unsafe(no_mangle)]
