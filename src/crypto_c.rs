@@ -1,5 +1,5 @@
 use crate::cc::{cbytes_to_rust, rust_to_cbytes, ngenrs_free_ptr};
-use crate::crypto::{Aes256EcbPkcs5, hash_md5, hash_sha1, hash_sha256, base64_encode, base64_decode};
+use crate::crypto::{Aes256EcbPkcs5, rsa_enc, rsa_dec, hash_md5, hash_sha1, hash_sha256, base64_encode, base64_decode};
 
 unsafe fn common_crypto_process<F>(
     data: *const u8,
@@ -50,7 +50,7 @@ fn ngenrs_crypto_aes256_ecb_pkcs5_encrypt(
     let cipher_ref = unsafe { &*cipher };
     unsafe { 
         common_crypto_process(data, data_len, out_len, |bytes| {
-            cipher_ref.encrypt(bytes)
+            cipher_ref.enc(bytes)
         })
     }
 }
@@ -69,7 +69,7 @@ fn ngenrs_crypto_aes256_ecb_pkcs5_decrypt(
     let cipher_ref = unsafe { &*cipher };
     unsafe {
         common_crypto_process(data, data_len, out_len, |bytes| {
-            cipher_ref.decrypt(bytes).unwrap_or_default()
+            cipher_ref.dec(bytes).unwrap_or_default()
         })
     }
 }
@@ -78,6 +78,66 @@ fn ngenrs_crypto_aes256_ecb_pkcs5_decrypt(
 pub extern "C" 
 fn ngenrs_crypto_aes256_ecb_pkcs5_release(cipher: *mut Aes256EcbPkcs5) {
     ngenrs_free_ptr(cipher);
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" 
+fn ngenrs_crypto_rsa_encrypt(
+    input: *const u8,
+    input_len: usize,
+    pub_key: *const u8,
+    pub_key_len: usize,
+    padding: i32,
+    out_len: *mut usize,
+) -> *mut u8 {
+    if input.is_null() || pub_key.is_null() {
+        return std::ptr::null_mut();
+    }
+
+    let input_bytes = match cbytes_to_rust(input, input_len) {
+        Some(bytes) => bytes.to_vec(),  // Convert to Vec<u8>
+        None => return std::ptr::null_mut(),
+    };
+
+    let pub_key_bytes = match cbytes_to_rust(pub_key, pub_key_len) {
+        Some(bytes) => bytes.to_vec(),  // Convert to Vec<u8>
+        None => return std::ptr::null_mut(),
+    };
+
+    let result = rsa_enc(input_bytes, pub_key_bytes, padding);
+    let (ptr, len) = rust_to_cbytes(result);
+    unsafe { *out_len = len };
+    ptr
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" 
+fn ngenrs_crypto_rsa_decrypt(
+    input: *const u8,
+    input_len: usize,
+    priv_key: *const u8,
+    priv_key_len: usize,
+    padding: i32,
+    out_len: *mut usize,
+) -> *mut u8 {
+    if input.is_null() || priv_key.is_null() {
+        return std::ptr::null_mut();
+    }
+
+    let input_bytes = match cbytes_to_rust(input, input_len) {
+        Some(bytes) => bytes.to_vec(),  // Convert to Vec<u8>
+        None => return std::ptr::null_mut(),
+    };
+
+    let priv_key_bytes = match cbytes_to_rust(priv_key, priv_key_len) {
+        Some(bytes) => bytes.to_vec(),  // Convert to Vec<u8>
+        None => return std::ptr::null_mut(),
+    };
+
+    let result = rsa_dec(input_bytes, priv_key_bytes, padding);
+    let (ptr, len) = rust_to_cbytes(result);
+    unsafe { *out_len = len };
+    ptr
 }
 
 #[unsafe(no_mangle)]
