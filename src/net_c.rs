@@ -1,6 +1,6 @@
 use std::os::raw::{c_char, c_void};
 use std::collections::HashMap;
-use crate::cc::{cstr_to_rust, rust_to_cbytes, ngenrs_free_ptr, box_into_raw_new};
+use crate::cc::{cstr_to_rust, rust_to_cstr, ngenrs_free_ptr, box_into_raw_new};
 use crate::net::{HttpClient, HttpResponse};
 use once_cell::sync::Lazy;
 use tokio::runtime::Runtime;
@@ -114,12 +114,12 @@ fn ngenrs_http_response_status(resp: *const c_void) -> u16 {
 
 #[unsafe(no_mangle)]
 pub extern "C"
-fn ngenrs_http_response_body(resp: *const c_void, out_len: *mut usize) -> *mut u8 {
+fn ngenrs_http_response_body(resp: *const c_void, out_len: *mut usize) -> *mut c_char {
     let resp = unsafe { &*(resp as *const HttpResponse) };
-    let bytes = resp.body.clone().unwrap_or_default().into_bytes();
-    let (ptr, len) = rust_to_cbytes(bytes);
+    let body_str = resp.body.clone().unwrap_or_default();
+    let ptr = rust_to_cstr(body_str.clone());
     if !out_len.is_null() {
-        unsafe { *out_len = len };
+        unsafe { *out_len = body_str.len() };
     }
     ptr
 }
