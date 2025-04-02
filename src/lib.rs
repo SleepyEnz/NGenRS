@@ -9,3 +9,5 @@ pub mod crypto;
 pub mod crypto_c;
 pub mod zip;
 pub mod zip_c;
+pub mod lua;
+pub mod lua_c;
