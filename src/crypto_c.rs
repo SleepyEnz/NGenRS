@@ -1,4 +1,4 @@
-use crate::cc::{cbytes_to_rust, rust_to_cbytes, ngenrs_free_ptr};
+use crate::cc::{cbytes_to_rust, rust_to_cbytes, ngenrs_free_ptr, ngenrs_box_into_raw};
 use crate::crypto::{Aes256EcbPkcs5, rsa_enc, rsa_dec, hash_md5, hash_sha1, hash_sha256, base64_encode, base64_decode};
 
 unsafe fn common_crypto_process<F>(
@@ -31,7 +31,7 @@ fn ngenrs_crypto_aes256_ecb_pkcs5_init(key: *const u8, key_len: usize) -> *mut A
         None => return std::ptr::null_mut(),
     };
     match Aes256EcbPkcs5::new(key_bytes) {
-        Ok(cipher) => Box::into_raw(Box::new(cipher)),
+        Ok(cipher) => ngenrs_box_into_raw(cipher),
         Err(_) => std::ptr::null_mut(),
     }
 }
@@ -81,7 +81,7 @@ fn ngenrs_crypto_aes256_ecb_pkcs5_release(cipher: *mut Aes256EcbPkcs5) {
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" 
+pub extern "C" 
 fn ngenrs_crypto_rsa_encrypt(
     input: *const u8,
     input_len: usize,
@@ -111,7 +111,7 @@ fn ngenrs_crypto_rsa_encrypt(
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" 
+pub extern "C" 
 fn ngenrs_crypto_rsa_decrypt(
     input: *const u8,
     input_len: usize,

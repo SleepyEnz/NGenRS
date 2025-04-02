@@ -68,3 +68,8 @@ pub extern "C"
 fn ngenrs_free_bytes(buf: *mut u8, len: usize) {
     ngenrs_free_ptr(unsafe { slice::from_raw_parts_mut(buf, len).as_mut_ptr() });
 }
+
+pub extern "C" 
+fn ngenrs_box_into_raw<T>(value: T) -> *mut T {
+    Box::into_raw(Box::new(value))
+}

@@ -1,6 +1,6 @@
 use std::os::raw::{c_char, c_void};
 use std::collections::HashMap;
-use crate::cc::{cstr_to_rust, rust_to_cbytes, ngenrs_free_ptr};
+use crate::cc::{cstr_to_rust, rust_to_cbytes, ngenrs_free_ptr, ngenrs_box_into_raw};
 use crate::net::{HttpClient, HttpResponse};
 use once_cell::sync::Lazy;
 use tokio::runtime::Runtime;
@@ -12,7 +12,7 @@ static RUNTIME: Lazy<Runtime> = Lazy::new(|| {
 
 // Client management
 #[unsafe(no_mangle)]
-pub unsafe extern "C"
+pub extern "C"
 fn ngenrs_http_client_new(ca_cert_path: *const c_char) -> *mut HttpClient {
     let ca_path = if !ca_cert_path.is_null() {
         let path_str = cstr_to_rust(ca_cert_path).unwrap();
@@ -21,13 +21,13 @@ fn ngenrs_http_client_new(ca_cert_path: *const c_char) -> *mut HttpClient {
         None
     };
 
-    Box::into_raw(Box::new(
+    ngenrs_box_into_raw(
         HttpClient::new(ca_path).expect("Failed to create HTTP client")
-    ))
+    )
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" 
+pub extern "C" 
 fn ngenrs_http_client_free(client: *mut HttpClient) {
     ngenrs_free_ptr(client as *mut c_void);
 }
@@ -45,7 +45,7 @@ unsafe fn handle_response(resp: Result<HttpResponse, Box<dyn std::error::Error>>
 
 // HTTP GET
 #[unsafe(no_mangle)]
-pub unsafe extern "C" 
+pub extern "C" 
 fn ngenrs_http_get(
     client: *const HttpClient,
     url: *const c_char,
@@ -71,7 +71,7 @@ fn ngenrs_http_get(
 
 // HTTP POST
 #[unsafe(no_mangle)]
-pub unsafe extern "C" 
+pub extern "C" 
 fn ngenrs_http_post(
     client: *const HttpClient,
     url: *const c_char,
@@ -103,20 +103,20 @@ fn ngenrs_http_post(
 
 // Response handling
 #[unsafe(no_mangle)]
-pub unsafe extern "C" 
+pub extern "C" 
 fn ngenrs_http_response_free(resp: *mut c_void) {
     ngenrs_free_ptr(resp);
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C" 
+pub extern "C" 
 fn ngenrs_http_response_status(resp: *const c_void) -> u16 {
     let resp = unsafe { &*(resp as *const HttpResponse) };
     resp.status.as_u16()
 }
 
 #[unsafe(no_mangle)]
-pub unsafe extern "C"
+pub extern "C"
 fn ngenrs_http_response_body(resp: *const c_void, out_len: *mut usize) -> *mut u8 {
     let resp = unsafe { &*(resp as *const HttpResponse) };
     let bytes = resp.body.clone().unwrap_or_default().into_bytes();
