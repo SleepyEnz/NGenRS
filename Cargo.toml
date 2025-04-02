@@ -15,6 +15,7 @@ futures = "0.3"
 reqwest = { version = "0.11", features = ["json", "stream", "native-tls"] }
 tokio = { version = "1.0", features = ["full"] }
 redb = "2.4.0"
+rusqlite = { version = "0.31.0", features = ["bundled"] }
 hex = "0.4.3"
 block-modes = "0.8.1"
 aes = "0.7.5"
