@@ -1,5 +1,5 @@
 use std::os::raw::c_char;
-use crate::cc::{cstr_to_rust, rust_to_cstr, ngenrs_free_ptr, ngenrs_box_into_raw};
+use crate::cc::{cstr_to_rust, rust_to_cstr, ngenrs_free_ptr, box_into_raw_new};
 use crate::kv::KV;
 
 #[unsafe(no_mangle)]
@@ -11,7 +11,7 @@ fn ngenrs_kv_open(path: *const c_char) -> *mut KV {
     };
     
     match KV::open(path_str) {
-        Ok(store) => ngenrs_box_into_raw(store),
+        Ok(store) => box_into_raw_new(store),
         Err(_) => std::ptr::null_mut(),
     }
 }

@@ -1,6 +1,6 @@
 use std::os::raw::{c_char, c_void};
 use std::collections::HashMap;
-use crate::cc::{cstr_to_rust, rust_to_cbytes, ngenrs_free_ptr, ngenrs_box_into_raw};
+use crate::cc::{cstr_to_rust, rust_to_cbytes, ngenrs_free_ptr, box_into_raw_new};
 use crate::net::{HttpClient, HttpResponse};
 use once_cell::sync::Lazy;
 use tokio::runtime::Runtime;
@@ -21,7 +21,7 @@ fn ngenrs_http_client_new(ca_cert_path: *const c_char) -> *mut HttpClient {
         None
     };
 
-    ngenrs_box_into_raw(
+    box_into_raw_new(
         HttpClient::new(ca_path).expect("Failed to create HTTP client")
     )
 }
