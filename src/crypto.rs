@@ -125,22 +125,22 @@ pub fn rsa_dec(input: Vec<u8>, private_key: Vec<u8>, padding: i32) -> Vec<u8> {
     }
 }
 
-pub fn hash_md5(data: &[u8]) -> Vec<u8> {
-    let mut hasher = Md5::new();
+pub fn hash<D: Digest>(data: &[u8]) -> Vec<u8> {
+    let mut hasher = D::new();
     hasher.update(data);
     hasher.finalize().to_vec()
+}
+
+pub fn hash_md5(data: &[u8]) -> Vec<u8> {
+    hash::<Md5>(data)
 }
 
 pub fn hash_sha1(data: &[u8]) -> Vec<u8> {
-    let mut hasher = Sha1::new();
-    hasher.update(data);
-    hasher.finalize().to_vec()
+    hash::<Sha1>(data)
 }
 
 pub fn hash_sha256(data: &[u8]) -> Vec<u8> {
-    let mut hasher = Sha256::new();
-    hasher.update(data);
-    hasher.finalize().to_vec()
+    hash::<Sha256>(data)
 }
 
 pub fn base64_encode(data: &[u8]) -> Vec<u8> {
