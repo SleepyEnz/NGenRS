@@ -102,13 +102,9 @@ impl LuaBridge {
         self.lua.load(script).exec()
     }
 
-    pub fn call_function<A, R>(&self, func_name: &str, args: A) -> Result<R>
-    where
-        A: for<'lua> mlua::ToLuaMulti<'lua>,
-        R: for<'lua> mlua::FromLuaMulti<'lua>,
-    {
+    pub fn call_function(&self, func_name: &str, arg: &str) -> Result<String> {
         let func: Function = self.lua.globals().get(func_name)?;
-        func.call(args)
+        func.call::<_, String>(arg)
     }
 
     // Export Rust function to Lua context

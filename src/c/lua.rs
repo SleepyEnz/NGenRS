@@ -56,27 +56,37 @@ pub extern "C"
 fn ngenrs_lua_call_function(
     bridge: *mut c_void,
     func_name: *const c_char,
-    args: *const c_char,
-) -> *mut c_char {
+    arg: *const c_char,
+    result_out: *mut *mut c_char,
+    err_out: *mut *mut c_char,
+) -> bool {
     if bridge.is_null() || func_name.is_null() {
-        return std::ptr::null_mut();
+        return false;
     }
+
     let bridge = unsafe { &*(bridge as *mut LuaBridge) };
     let func_name_str = match cstr_to_rust(func_name) {
         Some(s) => s,
-        None => return std::ptr::null_mut(),
-    };
-    let args_str = if !args.is_null() {
-        match cstr_to_rust(args) {
-            Some(s) => s,
-            None => return std::ptr::null_mut(),
-        }
-    } else {
-        ""
+        None => return false,
     };
 
-    match bridge.call_function::<_, String>(func_name_str, args_str) {
-        Ok(result) => rust_to_cstr(result),
-        Err(_) => std::ptr::null_mut(),
+    let arg_str = match cstr_to_rust(arg) {
+        Some(s) => s,
+        None => return false,
+    };
+
+    match bridge.call_function(func_name_str, arg_str) {
+        Ok(result) => {
+            if !result_out.is_null() {
+                unsafe { *result_out = rust_to_cstr(result) };
+            }
+            true
+        }
+        Err(e) => {
+            if !err_out.is_null() {
+                unsafe { *err_out = rust_to_cstr(e.to_string()) };
+            }
+            false
+        }
     }
 }

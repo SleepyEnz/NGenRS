@@ -5,6 +5,7 @@ pub mod core {
     pub mod net;
     pub mod zip;
     pub mod lua;
+    pub mod qjs;
 }
 
 pub mod c {
@@ -15,4 +16,5 @@ pub mod c {
     pub mod net;
     pub mod zip;
     pub mod lua;
+    pub mod qjs;
 }
