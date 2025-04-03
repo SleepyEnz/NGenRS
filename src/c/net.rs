@@ -13,7 +13,7 @@ static RUNTIME: Lazy<Runtime> = Lazy::new(|| {
 // Client management
 #[unsafe(no_mangle)]
 pub extern "C"
-fn ngenrs_http_client_new(ca_cert_path: *const c_char) -> *mut c_void {
+fn ngenrs_http_client_init(ca_cert_path: *const c_char) -> *mut c_void {
     let ca_path = if !ca_cert_path.is_null() {
         let path_str = cstr_to_rust(ca_cert_path).unwrap();
         Some(std::path::Path::new(path_str))
@@ -28,7 +28,7 @@ fn ngenrs_http_client_new(ca_cert_path: *const c_char) -> *mut c_void {
 
 #[unsafe(no_mangle)]
 pub extern "C" 
-fn ngenrs_http_client_free(client: *mut c_void) {
+fn ngenrs_http_client_release(client: *mut c_void) {
     ngenrs_free_ptr(client)
 }
 
@@ -101,7 +101,7 @@ fn ngenrs_http_post(
 // Response handling
 #[unsafe(no_mangle)]
 pub extern "C" 
-fn ngenrs_http_response_free(resp: *mut c_void) {
+fn ngenrs_http_response_release(resp: *mut c_void) {
     ngenrs_free_ptr(resp)
 }
 

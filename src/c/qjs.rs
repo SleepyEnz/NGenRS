@@ -5,7 +5,7 @@ use libc::{c_char, c_void};
 /// Creates a new JSBridge instance
 #[unsafe(no_mangle)]
 pub extern "C" 
-fn ngenrs_jsbridge_new() -> *mut c_void {
+fn ngenrs_jsbridge_init() -> *mut c_void {
     box_into_raw_new(JSBridge::new()) as *mut c_void
 }
 
@@ -111,7 +111,7 @@ fn ngenrs_jsbridge_call_function(
 /// Frees a JSBridge instance
 #[unsafe(no_mangle)]
 pub extern "C" 
-fn ngenrs_jsbridge_free(handle: *mut c_void) {
+fn ngenrs_jsbridge_release(handle: *mut c_void) {
     if !handle.is_null() {
         ngenrs_free_ptr(handle as *mut JSBridge);
     }
