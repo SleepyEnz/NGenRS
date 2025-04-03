@@ -94,3 +94,45 @@ pub unsafe fn rust_map_from_c_arrays(
     }
     Some(map)
 }
+
+/// Converts Rust HashMap to C-style string arrays
+/// Returns tuple of (keys_ptr, values_ptr, len)
+pub unsafe fn rust_map_to_c_arrays(
+    map: &HashMap<String, String>,
+    keys_out: *mut *mut c_char,
+    values_out: *mut *mut c_char,
+    count_out: *mut usize
+) {
+    if keys_out.is_null() || values_out.is_null() || count_out.is_null() {
+        return;
+    }
+
+    let len = map.len();
+    unsafe { *count_out = len };
+
+    if len == 0 {
+        return;
+    }
+
+    // Allocate arrays for keys and values
+    let mut keys_vec: Vec<*mut c_char> = Vec::with_capacity(len);
+    let mut values_vec: Vec<*mut c_char> = Vec::with_capacity(len);
+
+    for (k, v) in map {
+        keys_vec.push(rust_to_cstr(k.clone()));
+        values_vec.push(rust_to_cstr(v.clone()));
+    }
+
+    let keys_ptr = Box::into_raw(keys_vec.into_boxed_slice()) as *mut *mut c_char;
+    let values_ptr = Box::into_raw(values_vec.into_boxed_slice()) as *mut *mut c_char;
+    
+    // Copy to output pointers
+    unsafe {
+        std::ptr::copy_nonoverlapping(keys_ptr, keys_out, len);
+        std::ptr::copy_nonoverlapping(values_ptr, values_out, len);
+        
+        // Clean up using our standard free function
+        ngenrs_free_ptr(keys_ptr);
+        ngenrs_free_ptr(values_ptr);
+    }
+}

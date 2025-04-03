@@ -69,22 +69,36 @@ impl HttpClient {
         self.execute_request(request).await
     }
 
+    fn convert_string_map_to_json(
+        params: Option<HashMap<String, String>>
+    ) -> Option<HashMap<String, Value>> {
+        params.map(|map| {
+            map.into_iter()
+                .filter_map(|(k, v)| {
+                    serde_json::from_str::<Value>(&v)
+                        .map(|val| (k, val))
+                        .ok()
+                })
+                .collect()
+        })
+    }
+
     pub async fn post(
         &self,
         url: &str,
-        headers: Option<HashMap<String, String>>,  // Changed from &str to String 
+        headers: Option<HashMap<String, String>>,
         body: Option<&str>,
-        map: Option<HashMap<String, Value>>,       // Changed from &str to String
+        params: Option<HashMap<String, String>>,
     ) -> Result<HttpResponse, Box<dyn std::error::Error>> {
         let mut request = self.client.post(url);
 
         if let Some(headers_map) = headers {
             for (key, value) in headers_map {
-                request = request.header(key, value);
+                request = request.header(&key, &value);
             }
         }
 
-        if let Some(json_map) = map {
+        if let Some(json_map) = Self::convert_string_map_to_json(params) {
             request = request.json(&json_map);
         } else if let Some(body_content) = body {
             request = request.body(body_content.to_string());
