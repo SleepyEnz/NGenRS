@@ -1,7 +1,7 @@
 use crate::c::util::{cstr_to_rust, ngenrs_free_cstr, rust_to_cstr};
 use libquickjs_ng_sys::{
     JS_Call, JS_Eval, JS_FreeValue, JS_GetException, JS_GetGlobalObject, JS_GetPropertyStr,
-    JS_HasException, JS_NewContext, JS_NewRuntime, JS_NewStringLen, JS_SetPropertyStr, JS_ToString,
+    JS_HasException, JS_NewContext, JS_NewRuntime, JS_NewStringLen, JS_SetPropertyStr,
     JSContext, JSRuntime, JSValue,
 };
 use std::ffi::CString;
