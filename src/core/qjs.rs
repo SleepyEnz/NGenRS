@@ -27,44 +27,61 @@ impl JSBridge {
         }
     }
 
-    pub fn load_file(&self, path: &str) -> Result<(), String> {
+    pub fn load_script_file(&self, path: &str, is_module: bool) -> Result<(), String> {
         let content = fs::read_to_string(Path::new(path))
             .map_err(|e| format!("Failed to read file: {}", e))?;
-        self.load_script(&content)
+        self.load_script_content(&content, is_module)
     }
 
-    pub fn load_script(&self, script: &str) -> Result<(), String> {
+    pub fn load_script_content(&self, script: &str, is_module: bool) -> Result<(), String> {
         unsafe {
             let ctx = self.ctx.lock().unwrap();
             let cscript = CString::new(script).unwrap();
             let filename = CString::new("script.js").unwrap();
+
+            let eval_flags = if is_module {
+                libquickjs_ng_sys::JS_EVAL_TYPE_MODULE as i32
+            } else {
+                libquickjs_ng_sys::JS_EVAL_TYPE_GLOBAL as i32
+            };
 
             let val = JS_Eval(
                 *ctx,
                 cscript.as_ptr(),
                 script.len(),
                 filename.as_ptr(),
-                libquickjs_ng_sys::JS_EVAL_TYPE_GLOBAL as i32,
+                eval_flags,
             );
 
-            if JS_HasException(*ctx) {
-                let exception = JS_GetException(*ctx);
-                let string_val = JS_ToString(*ctx, exception);
+            self.eval_and_handle_errors(*ctx, val) // Changed from &mut *ctx to *ctx
+        }
+    }
 
-                let mut len = 0;
-                let ptr = libquickjs_ng_sys::JS_ToCStringLen2(*ctx, &mut len, string_val, false);
-                let err_msg = cstr_to_rust(ptr).unwrap_or("Unknown error").to_string();
+    pub fn load_bytecode_file(&self, path: &str) -> Result<(), String> {
+        let bytecode = fs::read(Path::new(path))
+            .map_err(|e| format!("Failed to read bytecode file: {}", e))?;
+        self.load_bytecode_content(&bytecode)
+    }
 
-                if !ptr.is_null() {
-                    libquickjs_ng_sys::JS_FreeCString(*ctx, ptr);
-                }
-                JS_FreeValue(*ctx, exception);
-                JS_FreeValue(*ctx, string_val);
-                return Err(format!("Script error: {}", err_msg));
+    pub fn load_bytecode_content(&self, bytecode: &[u8]) -> Result<(), String> {
+        unsafe {
+            let ctx = self.ctx.lock().unwrap();
+
+            let obj = libquickjs_ng_sys::JS_ReadObject(
+                *ctx,
+                bytecode.as_ptr(),
+                bytecode.len(),
+                libquickjs_ng_sys::JS_READ_OBJ_BYTECODE as i32,
+            );
+
+            if let Err(e) = self.eval_and_handle_errors(*ctx, obj) {
+                // Changed here
+                return Err(e.replace("Execution", "Bytecode read"));
             }
 
-            JS_FreeValue(*ctx, val);
-            Ok(())
+            let val = libquickjs_ng_sys::JS_EvalFunction(*ctx, obj);
+            self.eval_and_handle_errors(*ctx, val) // Changed here
+                .map_err(|e| e.replace("Execution", "Bytecode evaluation"))
         }
     }
 
@@ -201,6 +218,34 @@ impl JSBridge {
             JS_FreeValue(*ctx, global);
             Ok(())
         }
+    }
+
+    unsafe fn eval_and_handle_errors(
+        &self,
+        ctx: *mut JSContext,
+        value: JSValue,
+    ) -> Result<(), String> {
+        // Wrap all FFI calls in unsafe blocks
+        unsafe {
+            if libquickjs_ng_sys::JS_HasException(ctx) {
+                let exception = libquickjs_ng_sys::JS_GetException(ctx);
+                let string_val = libquickjs_ng_sys::JS_ToString(ctx, exception);
+
+                let mut len = 0;
+                let ptr = libquickjs_ng_sys::JS_ToCStringLen2(ctx, &mut len, string_val, false);
+                let err_msg = cstr_to_rust(ptr).unwrap_or("Unknown error").to_string();
+
+                if !ptr.is_null() {
+                    libquickjs_ng_sys::JS_FreeCString(ctx, ptr);
+                }
+                libquickjs_ng_sys::JS_FreeValue(ctx, exception);
+                libquickjs_ng_sys::JS_FreeValue(ctx, string_val);
+                return Err(format!("Execution error: {}", err_msg));
+            }
+
+            libquickjs_ng_sys::JS_FreeValue(ctx, value);
+        }
+        Ok(())
     }
 }
 

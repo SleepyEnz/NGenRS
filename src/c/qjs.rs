@@ -1,5 +1,5 @@
+use crate::c::util::{box_into_raw_new, cstr_to_rust, cbytes_to_rust, ngenrs_free_ptr, rust_to_cstr};
 use crate::core::qjs::JSBridge;
-use crate::c::util::{cstr_to_rust, rust_to_cstr, ngenrs_free_ptr, box_into_raw_new};
 use libc::{c_char, c_void};
 
 /// Creates a new JSBridge instance
@@ -12,9 +12,10 @@ fn ngenrs_jsbridge_init() -> *mut c_void {
 /// Loads a script from file
 #[unsafe(no_mangle)]
 pub extern "C" 
-fn ngenrs_jsbridge_load_file(
+fn ngenrs_jsbridge_load_script_file(
     handle: *mut c_void,
     path: *const c_char,
+    is_module: bool,
     err_out: *mut *mut c_char,
 ) -> bool {
     if handle.is_null() || path.is_null() {
@@ -27,7 +28,7 @@ fn ngenrs_jsbridge_load_file(
         None => return false,
     };
 
-    match bridge.load_file(path_str) {
+    match bridge.load_script_file(path_str, is_module) {
         Ok(_) => true,
         Err(e) => {
             if !err_out.is_null() {
@@ -41,9 +42,10 @@ fn ngenrs_jsbridge_load_file(
 /// Loads a script from string
 #[unsafe(no_mangle)]
 pub extern "C" 
-fn ngenrs_jsbridge_load_script(
+fn ngenrs_qjs_load_script_content(
     handle: *mut c_void,
     script: *const c_char,
+    is_module: bool,
     err_out: *mut *mut c_char,
 ) -> bool {
     if handle.is_null() || script.is_null() {
@@ -56,13 +58,75 @@ fn ngenrs_jsbridge_load_script(
         None => return false,
     };
 
-    match bridge.load_script(script_str) {
+    match bridge.load_script_content(script_str, is_module) {
         Ok(_) => true,
         Err(e) => {
             if !err_out.is_null() {
                 unsafe { *err_out = rust_to_cstr(e) };
             }
             false
+        }
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" 
+fn ngenrs_jsbridge_load_bytecode_file(
+    handle: *mut c_void,
+    path: *const c_char,
+    err_out: *mut *mut c_char,
+) -> bool {
+    if handle.is_null() || path.is_null() {
+        return false;
+    }
+
+    unsafe {
+        let bridge = &*(handle as *mut JSBridge);
+        let path_str = match cstr_to_rust(path) {
+            Some(s) => s,
+            None => return false,
+        };
+
+        match bridge.load_bytecode_file(path_str) {
+            Ok(_) => true,
+            Err(e) => {
+                if !err_out.is_null() {
+                    *err_out = rust_to_cstr(e);
+                }
+                false
+            }
+        }
+    }
+}
+
+/// Loads bytecode from memory buffer
+#[unsafe(no_mangle)]
+pub extern "C" 
+fn ngenrs_jsbridge_load_bytecode_content(
+    handle: *mut c_void,
+    bytecode: *const u8,
+    length: usize,
+    err_out: *mut *mut c_char,
+) -> bool {
+    if handle.is_null() || bytecode.is_null() {
+        return false;
+    }
+
+    unsafe {
+        let bridge = &*(handle as *mut JSBridge);
+        let bytecode_slice = match cbytes_to_rust(bytecode, length) {
+            Some(slice) => slice,
+            None => return false,
+        };
+
+        match bridge.load_bytecode_content(bytecode_slice) {
+            Ok(_) => true,
+            Err(e) => {
+                if !err_out.is_null() {
+                    *err_out = rust_to_cstr(e);
+                }
+                false
+            }
         }
     }
 }
