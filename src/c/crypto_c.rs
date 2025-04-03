@@ -1,5 +1,5 @@
-use crate::cc::{cbytes_to_rust, rust_to_cbytes, ngenrs_free_ptr, box_into_raw_new};
-use crate::crypto::{Aes256EcbPkcs5, rsa_enc, rsa_dec, hash_md5, hash_sha1, hash_sha256, base64_encode, base64_decode};
+use crate::c::util::{cbytes_to_rust, rust_to_cbytes, ngenrs_free_ptr, box_into_raw_new};
+use crate::core::crypto::{Aes256EcbPkcs5, rsa_enc, rsa_dec, hash_md5, hash_sha1, hash_sha256, base64_encode, base64_decode};
 use std::os::raw::c_void;
 
 unsafe fn common_crypto_process<F>(

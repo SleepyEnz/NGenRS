@@ -1,6 +1,6 @@
 use std::ffi::{c_char, c_void};
-use crate::cc::{cstr_to_rust, rust_to_cstr, ngenrs_free_ptr, box_into_raw_new};
-use crate::lua::LuaBridge;
+use crate::c::util::{cstr_to_rust, rust_to_cstr, ngenrs_free_ptr, box_into_raw_new};
+use crate::core::lua::LuaBridge;
 
 #[unsafe(no_mangle)]
 pub extern "C" 

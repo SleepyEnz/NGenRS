@@ -1,7 +1,7 @@
 use std::os::raw::{c_char, c_void};
 use std::collections::HashMap;
-use crate::cc::{cstr_to_rust, rust_to_cstr, ngenrs_free_ptr, box_into_raw_new};
-use crate::net::{HttpClient, HttpResponse};
+use crate::c::util::{cstr_to_rust, rust_to_cstr, ngenrs_free_ptr, box_into_raw_new};
+use crate::core::net::{HttpClient, HttpResponse};
 use once_cell::sync::Lazy;
 use tokio::runtime::Runtime;
 use serde_json::Value;

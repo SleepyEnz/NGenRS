@@ -1,7 +1,7 @@
 use std::ffi::CString;
 use std::os::raw::c_int;
-use crate::zip::{CompressionFormat, compress, decompress};
-use crate::cc::{cbytes_to_rust, rust_to_cbytes};
+use crate::core::zip::{CompressionFormat, compress, decompress};
+use crate::c::util::{cbytes_to_rust, rust_to_cbytes};
 
 #[unsafe(no_mangle)]
 pub extern "C" 

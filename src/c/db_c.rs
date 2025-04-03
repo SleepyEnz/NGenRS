@@ -1,5 +1,5 @@
-use crate::db::{DB, QueryResult};
-use crate::cc::{cstr_to_rust, rust_to_cstr, ngenrs_free_ptr, box_into_raw_new};
+use crate::core::db::{DB, QueryResult};
+use crate::c::util::{cstr_to_rust, rust_to_cstr, ngenrs_free_ptr, box_into_raw_new};
 use std::ffi::{c_void, c_char};
 use std::ptr;
 

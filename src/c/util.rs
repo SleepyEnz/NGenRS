@@ -57,14 +57,15 @@ pub fn ngenrs_free_ptr<T>(raw: *mut T) {
     }
 }
 
+// Replace the manually written exports with macro versions
 #[unsafe(no_mangle)]
-pub extern "C" 
+pub extern "C"
 fn ngenrs_free_cstr(s: *mut c_char) {
     free(unsafe { CString::from_raw(s) });
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" 
+pub extern "C"
 fn ngenrs_free_bytes(buf: *mut u8, len: usize) {
     ngenrs_free_ptr(unsafe { slice::from_raw_parts_mut(buf, len).as_mut_ptr() });
 }
