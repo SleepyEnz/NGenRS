@@ -110,14 +110,14 @@ impl HttpClient {
     pub async fn download(
         &self,
         url: &str,
-        headers: Option<HashMap<&str, &str>>,
+        headers: Option<HashMap<String, String>>,
         output_path: &Path,
     ) -> Result<HttpResponse, Box<dyn std::error::Error>> {
         let mut request = self.client.get(url);
 
         if let Some(headers_map) = headers {
             for (key, value) in headers_map {
-                request = request.header(key, value);
+                request = request.header(&key, &value);
             }
         }
 

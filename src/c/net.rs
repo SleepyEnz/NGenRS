@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::os::raw::{c_char, c_void};
+use std::path::Path;
 use crate::c::util::{cstr_to_rust, rust_to_cstr, rust_map_from_c_arrays, rust_map_to_c_arrays, ngenrs_free_ptr, box_into_raw_new};
 use crate::core::net::{HttpClient, HttpResponse};
 use once_cell::sync::Lazy;
@@ -87,6 +88,32 @@ fn ngenrs_http_post(
 
     let result = RUNTIME.block_on(async {
         client.post(&url, headers, body, json_map).await
+    });
+
+    match result {
+        Ok(resp) => box_into_raw_new(resp) as *mut c_void,
+        Err(_) => std::ptr::null_mut(),
+    }
+}
+
+// HTTP DOWNLOAD
+#[unsafe(no_mangle)]
+pub extern "C" 
+fn ngenrs_http_download(
+    client: *const c_void,
+    url: *const c_char,
+    header_keys: *const *const c_char,
+    header_values: *const *const c_char,
+    headers_len: usize,
+    output_path: *const c_char,
+) -> *mut c_void {
+    let client = unsafe { &*(client as *const HttpClient) };
+    let url = cstr_to_rust(url).unwrap_or_default();
+    let headers = unsafe { rust_map_from_c_arrays(header_keys, header_values, headers_len) };
+    let output_path = Path::new(cstr_to_rust(output_path).unwrap_or_default());
+
+    let result = RUNTIME.block_on(async {
+        client.download(&url, headers, output_path).await
     });
 
     match result {
