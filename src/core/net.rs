@@ -1,9 +1,10 @@
-use serde_json::Value;
 use std::collections::HashMap;
 use std::path::Path;
 use reqwest::Client;
 use reqwest::header::HeaderMap;
 use futures::StreamExt;
+use std::borrow::Borrow;
+use serde_json::Value;
 
 pub struct HttpClient {
     client: Client,
@@ -48,17 +49,21 @@ impl HttpClient {
         })
     }
 
-    pub async fn get(
+    pub async fn get<K, V>(
         &self,
         url: &str,
-        headers: Option<HashMap<String, String>>,  // Changed from &str to String
+        headers: Option<HashMap<K, V>>,
         body: Option<&str>,
-    ) -> Result<HttpResponse, Box<dyn std::error::Error>> {
+    ) -> Result<HttpResponse, Box<dyn std::error::Error>>
+    where
+        K: Borrow<str>,
+        V: Borrow<str>,
+    {
         let mut request = self.client.get(url);
 
         if let Some(headers_map) = headers {
             for (key, value) in headers_map {
-                request = request.header(&key, &value);  // Borrow the Strings here
+                request = request.header(key.borrow(), value.borrow());
             }
         }
 
@@ -69,36 +74,33 @@ impl HttpClient {
         self.execute_request(request).await
     }
 
-    fn convert_string_map_to_json(
-        params: Option<HashMap<String, String>>
-    ) -> Option<HashMap<String, Value>> {
-        params.map(|map| {
-            map.into_iter()
-                .filter_map(|(k, v)| {
-                    serde_json::from_str::<Value>(&v)
-                        .map(|val| (k, val))
-                        .ok()
-                })
-                .collect()
-        })
-    }
-
-    pub async fn post(
+    pub async fn post<K, V>(
         &self,
         url: &str,
-        headers: Option<HashMap<String, String>>,
+        headers: Option<HashMap<K, V>>,
         body: Option<&str>,
-        params: Option<HashMap<String, String>>,
-    ) -> Result<HttpResponse, Box<dyn std::error::Error>> {
+        params: Option<HashMap<K, V>>,
+    ) -> Result<HttpResponse, Box<dyn std::error::Error>>
+    where
+        K: Borrow<str>,
+        V: Borrow<str>,
+    {
         let mut request = self.client.post(url);
 
         if let Some(headers_map) = headers {
             for (key, value) in headers_map {
-                request = request.header(&key, &value);
+                request = request.header(key.borrow(), value.borrow());
             }
         }
 
-        if let Some(json_map) = Self::convert_string_map_to_json(params) {
+        if let Some(params_map) = params {
+            let json_map = params_map.into_iter()
+                .filter_map(|(k, v)| {
+                    serde_json::from_str::<Value>(v.borrow())
+                        .map(|val| (k.borrow().to_string(), val))
+                        .ok()
+                })
+                .collect::<HashMap<String, Value>>();
             request = request.json(&json_map);
         } else if let Some(body_content) = body {
             request = request.body(body_content.to_string());
@@ -107,17 +109,21 @@ impl HttpClient {
         self.execute_request(request).await
     }
 
-    pub async fn download(
+    pub async fn download<K, V>(
         &self,
         url: &str,
-        headers: Option<HashMap<String, String>>,
+        headers: Option<HashMap<K, V>>,
         output_path: &Path,
-    ) -> Result<HttpResponse, Box<dyn std::error::Error>> {
+    ) -> Result<HttpResponse, Box<dyn std::error::Error>>
+    where
+        K: Borrow<str>,
+        V: Borrow<str>,
+    {
         let mut request = self.client.get(url);
 
         if let Some(headers_map) = headers {
             for (key, value) in headers_map {
-                request = request.header(&key, &value);
+                request = request.header(key.borrow(), value.borrow());
             }
         }
 
