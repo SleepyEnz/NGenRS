@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use libc;
@@ -72,4 +73,24 @@ fn ngenrs_free_bytes(buf: *mut u8, len: usize) {
 
 pub fn box_into_raw_new<T>(value: T) -> *mut T {
     Box::into_raw(Box::new(value))
+}
+
+pub unsafe fn rust_map_from_c_arrays(
+    keys: *const *const c_char,
+    values: *const *const c_char,
+    len: usize,
+) -> Option<HashMap<String, String>> {
+    if keys.is_null() || values.is_null() {
+        return None;
+    }
+    let mut map = HashMap::new();
+    let keys_slice = unsafe { std::slice::from_raw_parts(keys, len) };
+    let values_slice = unsafe { std::slice::from_raw_parts(values, len) };
+    
+    for i in 0..len {
+        if let (Some(key), Some(value)) = (cstr_to_rust(keys_slice[i]), cstr_to_rust(values_slice[i])) {
+            map.insert(key.to_string(), value.to_string());
+        }
+    }
+    Some(map)
 }
